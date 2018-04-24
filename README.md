@@ -1,6 +1,9 @@
 lovingly
 --------
 
+**Note**: There are still some issues around the deployment process that need to be worked out, 
+so this should not be considered a complete POC. 
+
 `lovingly` provides a poc of using a FARGATE hosted container to read content 
 from an SQS queue and publish those contents to an http endpoint.
 
