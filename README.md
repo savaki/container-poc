@@ -1,4 +1,4 @@
-lovingly
+container-poc
 --------
 
 **Note**: There are still some issues around the deployment process that need to be worked out, 
