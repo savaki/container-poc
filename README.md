@@ -37,7 +37,7 @@ repository_url = 621410822360.dkr.ecr.us-east-1.amazonaws.com/lovingly/sample
 
 Save the `repository_url` for later.
 
-### Build docker image
+## Build docker image
 
 Two scripts have been provided to create the docker image.  We will want to configure
 the repository url here:
@@ -55,7 +55,7 @@ docker/docker-push.sh
 
 This will publish the docker image to the repository.
 
-### Deploy Service
+## Deploy Service
 
 Once the docker image has been pushed to the repository, we can deploy the service.
 
@@ -73,7 +73,7 @@ This terraform script will do the following:
 * create (or update) the service that will manage our container
 
 
-### Running tests locally
+## Running tests locally
 
 The python scripts used can be tested locally:
 
@@ -89,10 +89,29 @@ read a message from the sqs queue, `sample`, and POST contents to `http://localh
 python3 reader.py
 ```
 
-### Not Included
+## Pros and Cons vs Lambda
+
+### Pros
+
+* **Easy to test locally**.  Both the scripts and the docker image can be run locally without
+the need of additional software or wrappers.
+
+* **Same image for production**.  Since the docker image is the same image that will be deployed,
+one test it locally and feel confident there will be no issues when running in ECS.
+
+* **Easy to reason about**.  Since the program is just a python script, there are few surprising
+behaviors. 
+
+### Cons
+
+* Costlier than lambda.  As I've I've configured it, it's about $25/mo which is more than 
+lambda (since I believe your usage will fall into Lambda's free tier)
+
+## Not Included
 
 As a poc, there are a number of things missing from this project:
 
 * **Support for multiple environments**.  While you can certainly run the script multiple times
 with different configurations, there's no inherent support for multiple environments.
 
+* **Support for autoscaling**.  As a POC, I haven't bothered to add autoscaling support.
