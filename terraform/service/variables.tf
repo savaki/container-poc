@@ -17,7 +17,7 @@ variable "queue_name" {
 
 # endpoint defines the http endpoint that will receive the message
 variable "endpoint" {
-  default = "http://requestbin.fullcontact.com/tn6lpktn"
+  default = "http://requestbin.fullcontact.com/r3h3pcr3"
 }
 
 ##############################################################################

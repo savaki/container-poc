@@ -49,4 +49,6 @@ def main_loop():
 
 # and away we go
 #
+print("starting sqs to endpoint poc")
+
 main_loop()

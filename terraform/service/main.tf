@@ -10,8 +10,11 @@ data "aws_subnet" "main" {
   id = "${var.subnet_id}"
 }
 
-resource "aws_iam_role" "task_role" {
-  name = "lovingly_task"
+data "aws_region" "current" {
+}
+
+resource "aws_iam_role" "main" {
+  name = "lovingly"
 
   assume_role_policy = <<EOF
 {
@@ -30,37 +33,27 @@ EOF
 }
 
 resource "aws_iam_role_policy_attachment" "task_policy" {
-  role = "${aws_iam_role.task_role.id}"
+  role = "${aws_iam_role.main.id}"
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_iam_role" "execution_role" {
-  name = "lovingly_execution"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2008-10-17",
-  "Statement": [
-    {
-      "Action": "sts:AssumeRole",
-      "Principal": {
-        "Service": ["ecs-tasks.amazonaws.com"]
-      },
-      "Effect": "Allow"
-    }
-  ]
-}
-EOF
-}
-
 resource "aws_iam_role_policy_attachment" "ecr_read_only" {
-  role = "${aws_iam_role.execution_role.id}"
+  role = "${aws_iam_role.main.id}"
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "cloudwatch_full_access" {
+  role = "${aws_iam_role.main.id}"
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+}
+
 resource "aws_iam_role_policy_attachment" "sqs_full_access" {
-  role = "${aws_iam_role.execution_role.id}"
+  role = "${aws_iam_role.main.id}"
   policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
+}
+
+resource "aws_cloudwatch_log_group" "main" {
+  name = "/lovingly/sqs-publisher-poc"
 }
 
 resource "aws_ecs_task_definition" "app" {
@@ -71,7 +64,8 @@ resource "aws_ecs_task_definition" "app" {
   ]
   cpu = "${var.container_cpu}"
   memory = "${var.container_memory}"
-  execution_role_arn = "${aws_iam_role.execution_role.arn}"
+  execution_role_arn = "${aws_iam_role.main.arn}"
+  task_role_arn = "${aws_iam_role.main.arn}"
 
   container_definitions = <<DEFINITION
 [
@@ -81,8 +75,19 @@ resource "aws_ecs_task_definition" "app" {
     "cpu": ${var.container_cpu},
     "memory": ${var.container_memory},
     "name": "app",
-    "task_role_arn": "${aws_iam_role.task_role.arn}",
-    "essential": true
+    "essential": true,
+    "environment": [
+      { "name":"ENDPOINT", "value":"${var.endpoint}" },
+      { "name":"QUEUE", "value":"${var.queue_name}" }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "${aws_cloudwatch_log_group.main.name}",
+        "awslogs-region": "${data.aws_region.current.name}",
+        "awslogs-stream-prefix": "app"
+      }
+    }
   }
 ]
 DEFINITION
@@ -103,6 +108,15 @@ resource "aws_security_group" "main" {
       "0.0.0.0/0"
     ]
   }
+
+  ingress {
+    from_port = 0
+    to_port = 0
+    protocol = "-1"
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+  }
 }
 resource "aws_ecs_service" "main" {
   name = "sqs-publisher-poc"
@@ -112,6 +126,7 @@ resource "aws_ecs_service" "main" {
   launch_type = "FARGATE"
 
   network_configuration {
+    assign_public_ip = true
     security_groups = [
       "${aws_security_group.main.id}"
     ]
